@@ -1,24 +1,3 @@
-    # project structure
-
-```plaintext
-love-letter-scheduler/
-├── .env               # Environment variables (API keys, database connection)
-├── package.json       # Project dependencies and scripts
-├── server.js          # Main entry point
-├── config/            # Configuration files
-│   └── database.js    # Database connection configuration
-├── models/            # Data models (e.g., LoveLetter)
-│   └── LoveLetter.js
-├── routes/            # API endpoints (if you want a UI for managing letters)
-│   └── loveLetters.js
-├── services/          # Logic for generating and sending letters
-│   ├── geminiService.js  # Interaction with Gemini API
-│   └── emailService.js   # Sending emails
-├── scheduler.js       # Scheduled task for sending letters
-└── utils/             # Utility functions
-    └── dateUtils.js
-```
-
 Love Letter Scheduler is a Node.js application that schedules and sends love letters via email. It uses the Gemini API for generating love letters and sends them using an email service.
 
 ## Features

@@ -1,65 +1,115 @@
 const express = require('express');
 const router = express.Router();
-const LoveLetter = require('../models/LoveLetter');
+const db = require('../config/database');
+const geminiService = require('../services/geminiService'); // Import Gemini service
 
-// Create a new love letter
-router.post('/', async (req, res) => {
-    try {
-        const loveLetter = new LoveLetter(req.body);
-        await loveLetter.save();
-        res.status(201).send(loveLetter);
-    } catch (error) {
-        res.status(400).send(error);
-    }
+// TEST Gemini Route - Generates and returns a love letter from Gemini
+router.get('/testgemini', async (req, res) => {
+  try {
+    const letter = await geminiService.generateLoveLetter();
+    // to do - save the letter to the database
+    // to do - send the letter to the recipient email
+    res.send(letter); // Send the generated letter as the response
+  } catch (error) {
+    console.error("Error testing Gemini:", error);
+    res.status(500).send("Error generating love letter.");
+  }
 });
 
-// Get all love letters
-router.get('/', async (req, res) => {
-    try {
-        const loveLetters = await LoveLetter.find();
-        res.status(200).send(loveLetters);
-    } catch (error) {
-        res.status(500).send(error);
+// GET all love letters
+router.get('/', (req, res) => {
+  const query = 'SELECT * FROM love_letters';
+
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      console.error(err.message);
+      return res.status(500).json({ message: err.message });
     }
+    res.json(rows);
+  });
 });
 
-// Get a love letter by ID
-router.get('/:id', async (req, res) => {
-    try {
-        const loveLetter = await LoveLetter.findById(req.params.id);
-        if (!loveLetter) {
-            return res.status(404).send();
+// GET a specific love letter by ID
+router.get('/:id', (req, res) => {
+  const id = req.params.id;
+  const query = 'SELECT * FROM love_letters WHERE id = ?';
+
+  db.get(query, [id], (err, row) => {
+    if (err) {
+      console.error(err.message);
+      return res.status(500).json({ message: err.message });
+    }
+    if (!row) {
+      return res.status(404).json({ message: 'Love letter not found' });
+    }
+    res.json(row);
+  });
+});
+
+// POST a new love letter (for manual creation, if needed)
+router.post('/', (req, res) => {
+  const content = req.body.content;
+  const query = 'INSERT INTO love_letters (content) VALUES (?)';
+
+  db.run(query, [content], function (err) {
+    if (err) {
+      console.error(err.message);
+      return res.status(500).json({ message: err.message });
+    }
+    // Retrieve the newly inserted row
+    const newId = this.lastID;
+    db.get('SELECT * FROM love_letters WHERE id = ?', [newId], (err, row) => {
+      if (err) {
+        console.error(err.message);
+        return res.status(500).json({ message: err.message });
+      }
+      res.status(201).json(row);
+    });
+  });
+});
+
+// PUT (Update) an existing love letter (example - if you want to edit)
+router.put('/:id', (req, res) => {
+    const id = req.params.id;
+    const content = req.body.content;
+    const query = 'UPDATE love_letters SET content = ? WHERE id = ?';
+
+    db.run(query, [content, id], function (err) {
+        if (err) {
+            console.error(err.message);
+            return res.status(500).json({ message: err.message });
         }
-        res.status(200).send(loveLetter);
-    } catch (error) {
-        res.status(500).send(error);
-    }
+        if (this.changes === 0) {
+            return res.status(404).json({ message: 'Love letter not found' });
+        }
+        db.get('SELECT * FROM love_letters WHERE id = ?', [id], (err, row) => {
+            if (err) {
+                console.error(err.message);
+                return res.status(500).json({ message: err.message });
+            }
+            res.json(row);
+        });
+
+    });
 });
 
-// Update a love letter by ID
-router.patch('/:id', async (req, res) => {
-    try {
-        const loveLetter = await LoveLetter.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-        if (!loveLetter) {
-            return res.status(404).send();
-        }
-        res.status(200).send(loveLetter);
-    } catch (error) {
-        res.status(400).send(error);
+// DELETE a love letter
+router.delete('/:id', (req, res) => {
+  const id = req.params.id;
+  const query = 'DELETE FROM love_letters WHERE id = ?';
+
+  db.run(query, [id], function (err) {
+    if (err) {
+      console.error(err.message);
+      return res.status(500).json({ message: err.message });
     }
+    if (this.changes === 0) {
+      return res.status(404).json({ message: 'Love letter not found' });
+    }
+    res.json({ message: 'Love letter deleted' });
+  });
 });
 
-// Delete a love letter by ID
-router.delete('/:id', async (req, res) => {
-    try {
-        const loveLetter = await LoveLetter.findByIdAndDelete(req.params.id);
-        if (!loveLetter) {
-            return res.status(404).send();
-        }
-        res.status(200).send(loveLetter);
-    } catch (error) {
-        res.status(500).send(error);
-    }
-});
+
 
 module.exports = router;

@@ -1,29 +1,29 @@
-// filepath: /Users/david.smith1/Documents/work-space-personal-projects/love-letter-scheduler/config/database.js
-const { MongoClient, ServerApiVersion } = require('mongodb');
-const connectDB = async () => {
-  try {
-    // Create a MongoClient with a MongoClientOptions object to set the Stable API version
-    const client = new MongoClient(process.env.MONGO_URI, {
-      serverApi: {
-        version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-      }
-    });
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 
-    // Connect the client to the server
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+const dbPath = path.resolve(__dirname, '../data/loveletters.db'); // Store the database file in a 'data' directory. Create this directory.
 
-    // Keep the client open for further operations
-    return client;
-  } catch (error) {
-    console.error(`Error: ${error.message}`);
-    process.exit(1);
-  }
-};
+const db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        console.error("Error connecting to database:", err.message);
+    } else {
+        console.log("Connected to SQLite database.");
+        // Create the table if it doesn't exist
+        db.run(`
+            CREATE TABLE IF NOT EXISTS love_letters (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                content TEXT NOT NULL,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                scheduledFor DATETIME,
+                sent BOOLEAN DEFAULT 0
+            )
+        `, (err) => {
+            if (err) {
+                console.error("Error creating table:", err.message);
+            }
+        });
+    }
+});
 
-module.exports = connectDB;
+module.exports = db;
 

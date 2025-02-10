@@ -1,11 +1,11 @@
 const axios = require('axios');
-const LoveLetter = require('../models/LoveLetter'); // Import the model (Mongoose)
+const db = require('../config/database');
 
 const generateLoveLetter = async () => {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + apiKey;
 
-    const prompt = `Write a short, heartfelt love letter to my girlfriend.  Mention that she is beautiful, intelligent, kind, and makes me incredibly happy. Be creative, funny and romantic.`;
+    const prompt = `Write a short, friendly letter.`;
 
     const requestData = {
         contents: [{
@@ -15,18 +15,29 @@ const generateLoveLetter = async () => {
 
     try {
         const response = await axios.post(apiUrl, requestData);
+        console.log(response.data);
         const letter = response.data.candidates[0].content.parts[0].text;
         console.log(letter);
 
         // Save to database
-        const newLoveLetter = new LoveLetter({ content: letter });  // Mongoose
-        await newLoveLetter.save();
-        console.log('Love letter saved to database.');
+        const query = 'INSERT INTO love_letters (content) VALUES (?)';
+        return new Promise((resolve, reject) => {
+            db.run(query, [letter], function (err) {
+                if (err) {
+                    console.error("Error inserting love letter:", err.message);
+                    reject(err);
+                } else {
+                    console.log(`A row has been inserted with rowid ${this.lastID}`);
+                    resolve(letter);
+                }
+            });
+        });
 
-        return letter;
+
     } catch (error) {
         console.error('Error generating love letter:', error);
-        throw error; // Re-throw to be handled by the caller.
+        console.error("Full Gemini API Error:", error.response ? error.response.data : error.message); // Log the full error
+        return error; // Re-throw to be handled by the caller.
     }
 };
 
